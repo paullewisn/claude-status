@@ -1,0 +1,35 @@
+# claude-status
+
+A Claude Code mod that adds a one-row status band above the prompt, centred in the window:
+
+```
+APPROVED | CONTEXT | REVIEW WANTED
+```
+
+Indicators are dark grey when idle.
+
+| Indicator | Lights up | Colour | Flashes |
+|---|---|---|---|
+| `APPROVED` | The latest PR linked in the chat is approved | green | no |
+| `CONTEXT` | Context window is at 60% or more | amber; red from 80% | red only |
+| `REVIEW WANTED` | A non-draft PR is waiting for your review | amber | yes |
+
+Clicking any indicator forces an immediate lookup of reviews and approval.
+
+## Install
+
+```
+/plugin marketplace add paullewisn/claude-status
+/plugin install status --marketplace paullewisn/claude-status
+```
+
+## How it works
+
+- **Reviews**: checked at session start and every 20 minutes.
+  - GitHub: `gh search prs --review-requested=@me`. Needs `gh auth login`.
+  - Azure DevOps: only when `STATUS_ADO_ORG` is set (for example `https://dev.azure.com/my-org`). Needs `az login`.
+- **Approval**: the last PR URL (GitHub or Azure DevOps) that appears in the chat is the linked PR.
+  - GitHub: open and `reviewDecision` is `APPROVED`.
+  - Azure DevOps: active, at least one approving vote and no rejecting or waiting votes. Needs `az login`.
+  - Checked at session start, every 20 minutes, when a new PR link appears, and on click.
+- **Context**: read from the session every 2 seconds.

@@ -1,0 +1,14 @@
+{
+  "name": "claude-status",
+  "owner": {
+    "name": "paullewisn"
+  },
+  "description": "Status band for Claude Code: APPROVED, CONTEXT and REVIEW WANTED indicators.",
+  "plugins": [
+    {
+      "name": "status",
+      "source": "./",
+      "description": "One-row status band above the prompt: APPROVED, CONTEXT and REVIEW WANTED indicators."
+    }
+  ]
+}

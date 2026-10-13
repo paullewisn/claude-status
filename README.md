@@ -14,7 +14,7 @@ Indicators are dark grey when idle.
 | `CONTEXT` | Context window is at 60% or more | amber; red from 80% | red only |
 | `REVIEW WANTED` | A non-draft PR is waiting for your review | amber | yes |
 
-Clicking any indicator forces an immediate lookup of reviews and approval.
+Clicking `REVIEW WANTED` forces an immediate lookup of reviews and approval.
 
 ## Install
 

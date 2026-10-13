@@ -240,9 +240,7 @@ export const register: Register = on => {
       void lookup($)
     }
     const item = (name: string, color: string | null, flashes: boolean) => (
-      <Button key={name.toLowerCase()} plain onPress={refresh}>
-        <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
-      </Button>
+      <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
     )
 
     return (
@@ -253,7 +251,9 @@ export const register: Register = on => {
           <Text color={IDLE}>{' | '}</Text>
           {item('CONTEXT', contextColor(pct), pct >= RED_AT)}
           <Text color={IDLE}>{' | '}</Text>
-          {item('REVIEW WANTED', isReview ? AMBER : null, true)}
+          <Button key="review" plain onPress={refresh}>
+            {item('REVIEW WANTED', isReview ? AMBER : null, true)}
+          </Button>
         </Box>
       </Box>
     )

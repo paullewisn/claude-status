@@ -217,6 +217,45 @@ async function refreshContext($: EngineInterface) {
   } catch {}
 }
 
+async function indicators($: EngineInterface, e: Parameters<EngineInterface['ui']['resolve']>[0]) {
+  const { Button, Text } = $.ui.resolve(e)
+  const pct = await read($, context)
+  const isApproved = await read($, approved)
+  const isReview = (await read($, reviews)).length > 0
+  const lit = await read($, flash)
+  const isBusy = await read($, busy)
+  const step = await read($, spin)
+  const item = (name: string, color: string | null, flashes: boolean) => (
+    <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
+  )
+  const review = () => {
+    const [head, mid, tail] = sweep('REVIEW WANTED', step)
+    const parts: [string, string][] = [[head, IDLE], [mid, AMBER], [tail, IDLE]]
+
+    return (
+      <Button key="review" plain onPress={() => refreshClicked($)}>
+        {parts.filter(([s]) => s).map(([s, c], i) => (
+          <Text key={`s${i}`} color={c} bold>{s}</Text>
+        ))}
+      </Button>
+    )
+  }
+
+  return [
+    item('APPROVED', isApproved ? GREEN : null, false),
+    item('CONTEXT', contextColor(pct), pct >= RED_AT),
+    isBusy
+      ? review()
+      : isReview
+        ? (
+          <Button key="review" plain onPress={() => refreshClicked($)}>
+            {item('REVIEW WANTED', AMBER, true)}
+          </Button>
+        )
+        : item('REVIEW WANTED', null, true),
+  ]
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await refreshContext($)
@@ -268,46 +307,19 @@ export const register: Register = on => {
     }
 
     const above = await next(e)
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const pct = await read($, context)
-    const isApproved = await read($, approved)
-    const isReview = (await read($, reviews)).length > 0
-    const lit = await read($, flash)
-    const isBusy = await read($, busy)
-    const step = await read($, spin)
-    const item = (name: string, color: string | null, flashes: boolean) => (
-      <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
-    )
-    const review = () => {
-      const [head, mid, tail] = sweep('REVIEW WANTED', step)
-      const parts: [string, string][] = [[head, IDLE], [mid, AMBER], [tail, IDLE]]
-
-      return (
-        <Button key="review" plain onPress={() => refreshClicked($)}>
-          {parts.filter(([s]) => s).map(([s, c], i) => (
-            <Text key={`s${i}`} color={c} bold>{s}</Text>
-          ))}
-        </Button>
-      )
-    }
+    const { Box, Text } = $.ui.resolve(e)
+    const [a, c, r] = await indicators($, e)
 
     return (
       <Box flexDirection="column">
         {above}
+        <Text color={IDLE}>{'─'.repeat(Math.max(0, (e.viewport?.columns ?? 80) - 5))}</Text>
         <Box width="100%" justifyContent="center">
-          {item('APPROVED', isApproved ? GREEN : null, false)}
+          {a}
           <Text color={IDLE}>{' | '}</Text>
-          {item('CONTEXT', contextColor(pct), pct >= RED_AT)}
+          {c}
           <Text color={IDLE}>{' | '}</Text>
-          {isBusy
-            ? review()
-            : isReview
-              ? (
-                <Button key="review" plain onPress={() => refreshClicked($)}>
-                  {item('REVIEW WANTED', AMBER, true)}
-                </Button>
-              )
-              : item('REVIEW WANTED', null, true)}
+          {r}
         </Box>
       </Box>
     )

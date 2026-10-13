@@ -1,6 +1,18 @@
 import { expect, test } from 'claude-code/testing'
 
-import { adoApproved, contextColor, lastPrUrl, parseAdoPr } from './register'
+import { adoApproved, contextColor, lastPrUrl, parseAdoPr, sweep } from './register'
+
+test('sweep keeps the text width and moves a 3-char window', () => {
+  const text = 'REVIEW WANTED'
+
+  for (let step = 0; step < 40; step++) {
+    expect(sweep(text, step).join('')).toBe(text)
+  }
+
+  expect(sweep(text, 0)).toEqual(['', '', text])
+  expect(sweep(text, 3)).toEqual(['', 'REV', 'IEW WANTED'])
+  expect(sweep(text, 14)).toEqual(['REVIEW WANT', 'ED', ''])
+})
 
 test('context colour thresholds', () => {
   expect(contextColor(59)).toBe(null)

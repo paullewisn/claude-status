@@ -8,6 +8,8 @@ declare module 'claude-code' {
       linkedPr: string | null
       approved: boolean
       flash: boolean
+      busy: boolean
+      spin: number
     }
   }
 }

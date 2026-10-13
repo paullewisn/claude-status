@@ -8,6 +8,8 @@ const reviews = atom({ plugin: 'status', key: 'reviews' } as const, [])
 const linkedPr = atom({ plugin: 'status', key: 'linkedPr' } as const, null)
 const approved = atom({ plugin: 'status', key: 'approved' } as const, false)
 const flash = atom({ plugin: 'status', key: 'flash' } as const, true)
+const busy = atom({ plugin: 'status', key: 'busy' } as const, false)
+const spin = atom({ plugin: 'status', key: 'spin' } as const, 0)
 
 const IDLE = '#443a3a'
 const AMBER = '#ffb454'
@@ -16,12 +18,15 @@ const GREEN = '#5fd075'
 const AMBER_AT = 60
 const RED_AT = 80
 const FLASH_MS = 500
+const SPIN_MS = 90
+const MIN_BUSY_MS = 800
+const SWEEP_W = 3
 const POLL_MS = 20 * 60_000
 const ADO_RESOURCE = '499b84ac-1321-427f-aa17-267ca6975798'
 const URL_CHARS = '[A-Za-z0-9._~%/:+=&?-]'
 
 let adoUserId: string | null = null
-let polling = false
+let running: Promise<void> | null = null
 let again = false
 
 const adoOrg = (): string =>
@@ -156,23 +161,50 @@ async function checkApproval($: EngineInterface) {
   }
 }
 
-async function lookup($: EngineInterface) {
-  if (polling) {
+function lookup($: EngineInterface): Promise<void> {
+  if (running) {
     again = true
 
-    return
+    return running
   }
 
-  polling = true
+  running = (async () => {
+    try {
+      do {
+        again = false
+        await Promise.all([pollReviews($).catch(() => {}), checkApproval($).catch(() => {})])
+      } while (again)
+    } finally {
+      running = null
+    }
+  })()
+
+  return running
+}
+
+async function refreshClicked($: EngineInterface) {
+  if (await read($, busy)) return
+
+  await update($, busy, () => true)
 
   try {
-    do {
-      again = false
-      await Promise.all([pollReviews($).catch(() => {}), checkApproval($).catch(() => {})])
-    } while (again)
+    await Promise.all([
+      lookup($),
+      new Promise<void>(resolve => {
+        $.clock.after(MIN_BUSY_MS, resolve)
+      }),
+    ])
   } finally {
-    polling = false
+    await update($, busy, () => false)
   }
+}
+
+export const sweep = (text: string, step: number): [string, string, string] => {
+  const start = (step % (text.length + SWEEP_W)) - SWEEP_W
+  const from = Math.max(0, start)
+  const to = Math.min(text.length, start + SWEEP_W)
+
+  return [text.slice(0, from), text.slice(from, to), text.slice(to)]
 }
 
 async function refreshContext($: EngineInterface) {
@@ -197,6 +229,11 @@ export const register: Register = on => {
 
       if (flashing || !lit) {
         await update($, flash, () => (flashing ? !lit : true))
+      }
+    })
+    $.clock.every(SPIN_MS, async () => {
+      if (await read($, busy)) {
+        await update($, spin, n => n + 1)
       }
     })
     void lookup($)
@@ -236,12 +273,23 @@ export const register: Register = on => {
     const isApproved = await read($, approved)
     const isReview = (await read($, reviews)).length > 0
     const lit = await read($, flash)
-    const refresh = () => {
-      void lookup($)
-    }
+    const isBusy = await read($, busy)
+    const step = await read($, spin)
     const item = (name: string, color: string | null, flashes: boolean) => (
       <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
     )
+    const review = () => {
+      const [head, mid, tail] = sweep('REVIEW WANTED', step)
+      const parts: [string, string][] = [[head, IDLE], [mid, AMBER], [tail, IDLE]]
+
+      return (
+        <Button key="review" plain onPress={() => refreshClicked($)}>
+          {parts.filter(([s]) => s).map(([s, c], i) => (
+            <Text key={`s${i}`} color={c} bold>{s}</Text>
+          ))}
+        </Button>
+      )
+    }
 
     return (
       <Box flexDirection="column">
@@ -251,9 +299,15 @@ export const register: Register = on => {
           <Text color={IDLE}>{' | '}</Text>
           {item('CONTEXT', contextColor(pct), pct >= RED_AT)}
           <Text color={IDLE}>{' | '}</Text>
-          <Button key="review" plain onPress={refresh}>
-            {item('REVIEW WANTED', isReview ? AMBER : null, true)}
-          </Button>
+          {isBusy
+            ? review()
+            : isReview
+              ? (
+                <Button key="review" plain onPress={() => refreshClicked($)}>
+                  {item('REVIEW WANTED', AMBER, true)}
+                </Button>
+              )
+              : item('REVIEW WANTED', null, true)}
         </Box>
       </Box>
     )

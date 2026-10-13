@@ -23,6 +23,19 @@ Indicators are dark grey when idle.
 /plugin install status --marketplace paullewisn/claude-status
 ```
 
+## Position
+
+Mods that draw above the prompt stack in load order: the first loaded is drawn lowest. For `status` to sit at the bottom, below other band mods such as Clawd, list it before them in `enabledPlugins` in `~/.claude/settings.json`:
+
+```json
+"enabledPlugins": {
+  "status@claude-status": true,
+  "clawd@clawd-pet": true
+}
+```
+
+Restart Claude Code after changing the order. The order is otherwise the order the plugins were installed in.
+
 ## How it works
 
 - **Reviews**: checked at session start and every 20 minutes.

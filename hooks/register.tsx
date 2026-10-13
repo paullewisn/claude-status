@@ -275,8 +275,8 @@ export const register: Register = on => {
     const lit = await read($, flash)
     const isBusy = await read($, busy)
     const step = await read($, spin)
-    const item = (name: string, color: string | null, flashes: boolean) => (
-      <Text color={color && (!flashes || lit) ? color : IDLE} bold>{name}</Text>
+    const item = (name: string, color: string | null, flashes: boolean, clickable = false) => (
+      <Text color={color && (!flashes || lit) ? color : IDLE} bold underline={clickable}>{name}</Text>
     )
     const review = () => {
       const [head, mid, tail] = sweep('REVIEW WANTED', step)
@@ -285,7 +285,7 @@ export const register: Register = on => {
       return (
         <Button key="review" plain onPress={() => refreshClicked($)}>
           {parts.filter(([s]) => s).map(([s, c], i) => (
-            <Text key={`s${i}`} color={c} bold>{s}</Text>
+            <Text key={`s${i}`} color={c} bold underline>{s}</Text>
           ))}
         </Button>
       )
@@ -304,7 +304,7 @@ export const register: Register = on => {
             : isReview
               ? (
                 <Button key="review" plain onPress={() => refreshClicked($)}>
-                  {item('REVIEW WANTED', AMBER, true)}
+                  {item('REVIEW WANTED', AMBER, true, true)}
                 </Button>
               )
               : item('REVIEW WANTED', null, true)}
